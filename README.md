@@ -2,6 +2,41 @@
 
 Bu proje, WebGL kullanarak HTML Canvas üzerinde basit grafik çizimlerini yapar. Aşağıda, projede kullanılan sınıf ve fonksiyonların kısa açıklamaları bulunmaktadır.
 
+## Shader kodları
+
+### Vertex Shader
+
+```
+<script id="vertex-shader" type="x-shader/x-vertex">
+    attribute vec4 aVertexPosition;
+    attribute vec4 aVertexColor;
+    uniform vec2 translation; 
+    uniform float rotation;
+    uniform float scaling; 
+    varying vec4 vColor;
+    void main() {
+        vec2 transformedPosition = vec2(
+            aVertexPosition.x * cos(rotation) - aVertexPosition.y * sin(rotation),
+            aVertexPosition.x * sin(rotation) + aVertexPosition.y * cos(rotation)
+        ) * scaling;
+        gl_Position = vec4(transformedPosition + translation, 0.0, 1.0);
+        vColor = aVertexColor;
+        gl_PointSize = 20.4 * scaling;
+    }
+</script>
+```
+### Fragment Shader
+```
+<script id="fragment-shader" type="x-shader/x-fragment">
+            precision highp float;
+            varying vec4 vColor;
+            void main() {
+                gl_FragColor = vColor;
+                
+            }
+ </script>
+```
+
 ## Sınıflar
 
 ### `Character`
