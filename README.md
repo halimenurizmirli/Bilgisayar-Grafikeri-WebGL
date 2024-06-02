@@ -1,6 +1,7 @@
 # WebGL ile Basit Grafik Çizimi
 
 Bu proje, WebGL kullanarak HTML Canvas üzerinde basit grafik çizimlerini yapar. Aşağıda, projede kullanılan sınıf ve fonksiyonların kısa açıklamaları bulunmaktadır.
+[HTML Dosyasını Görüntüleyin](./main.html)
 
 ## Sınıflar
 
@@ -68,8 +69,8 @@ Bir noktayı çizer.
 
 ### `createIwLines()`
 
-`I` harfini yatay ve dikey çizgilerle oluşturan bir `Character` nesnesi oluşturur.
-![I harfi](image.png)
+- `I` harfini yatay ve dikey çizgilerle oluşturan bir `Character` nesnesi oluşturur. Görüntüsü aşağıdaki gibidir:
+- ![I harfi](image.png)
 
 ### `drawN()`
 
