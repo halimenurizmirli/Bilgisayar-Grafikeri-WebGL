@@ -1,7 +1,6 @@
 # WebGL ile Basit Grafik Çizimi
 
 Bu proje, WebGL kullanarak HTML Canvas üzerinde basit grafik çizimlerini yapar. Aşağıda, projede kullanılan sınıf ve fonksiyonların kısa açıklamaları bulunmaktadır.
-[HTML Dosyasını Görüntüleyin](./main.html)
 
 ## Sınıflar
 
