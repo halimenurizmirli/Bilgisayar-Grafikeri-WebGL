@@ -1,0 +1,422 @@
+<!DOCTYPE html>
+<html>
+
+<body>
+    <canvas width="1200" height="476" id="myCanvas"></canvas>
+
+    <!-- Shader kodlarını almak için gerekli script etiketleri -->
+    <script id="vertex-shader" type="x-shader/x-vertex">
+            attribute vec4 aVertexPosition;
+            attribute vec4 aVertexColor;
+            uniform vec2 translation; 
+            uniform float rotation;
+            uniform float scaling; 
+            varying vec4 vColor;
+            void main() {
+                // Translation ve rotation işlemlerini gerçekleştir
+                vec2 transformedPosition = vec2(
+                    aVertexPosition.x * cos(rotation) - aVertexPosition.y * sin(rotation),
+                    aVertexPosition.x * sin(rotation) + aVertexPosition.y * cos(rotation)
+                ) * scaling ;
+                gl_Position = vec4(transformedPosition + translation, 0.0, 1.0);
+                vColor = aVertexColor;
+                gl_PointSize = 20.4 * scaling;
+            }
+        </script>
+
+    <script id="fragment-shader" type="x-shader/x-fragment">
+            precision highp float;
+            varying vec4 vColor;
+            void main() {
+                gl_FragColor = vColor;
+                
+            }
+        </script>
+
+    <script>
+        // WebGL konteksti oluşturuluyor
+        var canvas = document.getElementById("myCanvas");
+        var gl = canvas.getContext("webgl");
+
+        var vsSource = document.getElementById("vertex-shader").text;
+        var fsSource = document.getElementById("fragment-shader").text;
+
+        var vertexShader = gl.createShader(gl.VERTEX_SHADER);
+        gl.shaderSource(vertexShader, vsSource);
+        gl.compileShader(vertexShader);
+        if (!gl.getShaderParameter(vertexShader, gl.COMPILE_STATUS)) {
+            console.error('Vertex shader compile error:', gl.getShaderInfoLog(vertexShader));
+        }
+
+        var fragmentShader = gl.createShader(gl.FRAGMENT_SHADER);
+        gl.shaderSource(fragmentShader, fsSource);
+        gl.compileShader(fragmentShader);
+        if (!gl.getShaderParameter(fragmentShader, gl.COMPILE_STATUS)) {
+            console.error('Fragment shader compile error:', gl.getShaderInfoLog(fragmentShader));
+        }
+
+        var shaderProgram = gl.createProgram();
+        gl.attachShader(shaderProgram, vertexShader);
+        gl.attachShader(shaderProgram, fragmentShader);
+        gl.linkProgram(shaderProgram);
+        if (!gl.getProgramParameter(shaderProgram, gl.LINK_STATUS)) {
+            console.error('Shader program link error:', gl.getProgramInfoLog(shaderProgram));
+        }
+        gl.useProgram(shaderProgram);
+
+        class Character {
+            constructor(name1) {
+                this.name = name1;
+                this.rotation = 0.0;
+                this.translation = [0.0, 0.0];
+                this.scaling = 1.0;
+                this.color = [];  // Başlangıçta boş renk dizisi
+                this.vertices = [];  // Başlangıçta boş vertex dizisi
+                this.index = new Int32Array();
+            }
+
+            setVerticesAndColor(x, y, R, G, B) {
+                this.vertices.push(x, y);
+                this.color.push(R * 0.00392156862, G * 0.00392156862, B * 0.00392156862, 1.0);
+            }
+            setColor(R, G, B) {
+                this.color = [];
+                for (let i = 0; i < this.vertices.length / 2; i++) {
+                    this.color.push(R * 0.00392156862, G * 0.00392156862, B * 0.00392156862, 1.0);
+                }
+            }
+
+            setColorForLine(colors) {
+                this.color = [];
+                for (var i = 0; i < this.vertices.length / 2; i++) {
+
+                    this.color.push(colors[i * 3] * 0.00392156862, colors[i * 3 + 1] * 0.00392156862, colors[i * 3 + 2] * 0.00392156862, 1.0);
+                }
+            }
+
+
+            setIndex(array) {
+                let currentArray = Array.from(this.index);
+                currentArray.push(...array);
+                this.index = new Int32Array(currentArray);
+            }
+
+
+
+            setTranslation(x, y) { this.translation = [x, y]; }
+
+            setRotation(angle) { this.rotation = angle; } // Açı: radyan cinsinden
+
+            setScaling(scale) { this.scaling = scale; } // Ölçek: pixel
+
+            reflectX() {
+                for (let i = 1; i < this.vertices.length; i += 2) {
+                    this.vertices[i] = -this.vertices[i];
+                }
+
+            }
+            reflectY() {
+                for (let i = 0; i < this.vertices.length - 1; i += 2) {
+                    this.vertices[i] = -this.vertices[i];
+                }
+            }
+
+            createVertexBuffer() {
+                this.vertexBuffer = gl.createBuffer();
+                gl.bindBuffer(gl.ARRAY_BUFFER, this.vertexBuffer);
+                gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(this.vertices), gl.STATIC_DRAW);
+            }
+
+            createColorBuffer() {
+                this.colorBuffer = gl.createBuffer();
+                gl.bindBuffer(gl.ARRAY_BUFFER, this.colorBuffer);
+                gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(this.color), gl.STATIC_DRAW);
+            }
+
+            draw(primitiveType) {
+                if (this.vertices.length === 0 || this.color.length === 0) {
+                    console.error(`Vertices and color data must be set before drawing. Obje: ${this.name}`);
+                    return;
+                }
+
+                this.positionAttribLocation = gl.getAttribLocation(shaderProgram, 'aVertexPosition');
+                this.colorAttribLocation = gl.getAttribLocation(shaderProgram, 'aVertexColor');
+                this.translationUniformLocation = gl.getUniformLocation(shaderProgram, 'translation');
+                this.rotationUniformLocation = gl.getUniformLocation(shaderProgram, 'rotation');
+                this.scalingUniformLocation = gl.getUniformLocation(shaderProgram, 'scaling');
+
+                this.createVertexBuffer();
+                this.createColorBuffer();
+
+                gl.bindBuffer(gl.ARRAY_BUFFER, this.vertexBuffer);
+                gl.vertexAttribPointer(this.positionAttribLocation, 2, gl.FLOAT, false, 0, 0);
+                gl.enableVertexAttribArray(this.positionAttribLocation);
+
+                gl.bindBuffer(gl.ARRAY_BUFFER, this.colorBuffer);
+                gl.vertexAttribPointer(this.colorAttribLocation, 4, gl.FLOAT, false, 0, 0);
+                gl.enableVertexAttribArray(this.colorAttribLocation);
+
+                gl.uniform2fv(this.translationUniformLocation, this.translation);
+                gl.uniform1f(this.rotationUniformLocation, this.rotation);
+                gl.uniform1f(this.scalingUniformLocation, this.scaling);
+
+                for (var i = 0; i < this.index.length / 2; i++) {
+                    let first = this.index[i * 2];
+                    let count = this.index[i * 2 + 1];
+                    gl.drawArrays(primitiveType, first, count);
+                }
+            }
+        }
+
+        function createL() {
+            let characterL = new Character('L harfi');
+
+            characterL.setVerticesAndColor(0.0, -0.3, 245, 56, 60);  // Sol alt köşe
+            characterL.setVerticesAndColor(0.034, -0.3, 245, 56, 60);   // Sağ alt köşe
+            characterL.setVerticesAndColor(0.034, 0.3, 245, 56, 60);  // Sağ üst köşe
+            characterL.setVerticesAndColor(0.0, 0.3, 245, 56, 60);  // Sol üst köşe
+            characterL.setVerticesAndColor(0.034, -0.3, 245, 56, 60);  // Sol alt köşe
+            characterL.setVerticesAndColor(0.136, -0.3, 245, 56, 60);  // Sağ alt köşe
+            characterL.setVerticesAndColor(0.136, -0.2143, 245, 56, 60);  // Sağ üst köşe
+            characterL.setVerticesAndColor(0.034, -0.2143, 245, 56, 60);  // Sol üst köşe
+            characterL.setIndex([0, 4, 4, 4]);
+
+            return characterL;
+        }
+        function drawL() {
+            let l = createL();
+            l.setTranslation(-0.558, 0);
+            l.draw(gl.TRIANGLE_FAN);
+        }
+        function createI() {
+            let characterI = new Character('I harfi');
+            for (var i = 0; i < 7; i++) {
+                characterI.setVerticesAndColor(0.0, i * 0.0857, 255, 215, 50);
+            }
+            characterI.setIndex([0, 7]);
+
+            return characterI;
+
+        }
+
+        function drawI() {
+            let i = createI();
+            i.setTranslation(-0.371, -0.25715);
+            i.draw(gl.POINTS);
+        }
+        function drawPoint() {
+            let point = new Character('nokta');
+            point.setVerticesAndColor(-0.371, 0.4285, 255, 215, 50);
+            point.setIndex([0, 1]);
+            point.draw(gl.POINTS);
+        }
+
+        function drawA() {
+            let characterA = new Character('A harfi');
+            characterA.setVerticesAndColor(-0.694, 0.3, 218, 211, 213);
+            characterA.setVerticesAndColor(-0.762, -0.3, 218, 211, 213);
+            characterA.setVerticesAndColor(-0.728, -0.3, 218, 211, 213);
+            characterA.setVerticesAndColor(-0.66, 0.3, 218, 211, 213);
+
+            characterA.setVerticesAndColor(-0.592, -0.3, 218, 211, 213);
+            characterA.setVerticesAndColor(-0.626, -0.3, 218, 211, 213);
+
+            characterA.setVerticesAndColor(-0.728, -0.1286, 218, 211, 213);
+            characterA.setVerticesAndColor(-0.626, -0.1286, 218, 211, 213);
+            characterA.setVerticesAndColor(-0.626, -0.0428, 218, 211, 213);
+            characterA.setVerticesAndColor(-0.728, -0.0428, 218, 211, 213);
+            characterA.setIndex([0, 6, 6, 4]);
+
+            characterA.draw(gl.TRIANGLE_FAN);
+
+        }
+
+        function drawM() {
+            let characterM = new Character('M harfi');
+            characterM.setVerticesAndColor(-0.32, 0.3, 4, 150, 101);
+            characterM.setVerticesAndColor(-0.32, -0.3, 4, 150, 101);
+            characterM.setVerticesAndColor(-0.286, -0.3, 4, 150, 101);
+            characterM.setVerticesAndColor(-0.286, 0.3, 4, 150, 101);
+            characterM.setVerticesAndColor(-0.218, -0.0429, 4, 150, 101);
+            characterM.setVerticesAndColor(-0.218, -0.1286, 4, 150, 101);
+            characterM.setVerticesAndColor(-0.2384, -0.1286, 4, 150, 101);
+            characterM.setIndex([0, 7]);
+            characterM.draw(gl.TRIANGLE_FAN);
+            characterM.reflectY();
+            characterM.setTranslation(-0.436, 0);
+            characterM.draw(gl.TRIANGLE_FAN);
+
+
+        }
+        function drawE() {
+            let l = createL();
+            l.setColor(144, 233, 240);
+            l.setTranslation(-0.082, 0);
+            l.draw(gl.TRIANGLE_FAN);
+            l.reflectX();
+            l.setTranslation(-0.082, 0);
+            l.draw(gl.TRIANGLE_FAN);
+            let line = new Character('cizgi');
+            line.setVerticesAndColor(-0.048, -0.04285, 144, 233, 240);
+            line.setVerticesAndColor(0.02, -0.04285, 144, 233, 240);
+            line.setVerticesAndColor(0.02, 0.04285, 144, 233, 240);
+            line.setVerticesAndColor(-0.048, 0.04285, 144, 233, 240);
+            line.setIndex([0, 4]);
+            line.draw(gl.TRIANGLE_FAN);
+
+        }
+
+        function drawH() {
+            let l1 = createL();
+            let i1 = createI();
+            l1.setColor(147, 75, 197);
+            i1.setColor(147, 75, 197); //70,18,32
+            l1.setScaling(0.5);
+            l1.setTranslation(-0.949, 0.15); //-0,966 biteceği nokta
+            l1.draw(gl.TRIANGLE_FAN);
+            l1.reflectX();
+            l1.setTranslation(-0.949, -0.15);
+            l1.draw(gl.TRIANGLE_FAN);
+            l1.reflectY();
+            l1.setTranslation(-0.813, -0.15);
+            l1.draw(gl.TRIANGLE_FAN);
+            l1.reflectX();
+            l1.setTranslation(-0.813, 0.15);
+            l1.draw(gl.TRIANGLE_FAN);
+
+            i1.setTranslation(-0.9575, 0.021425); // 0.017/2 ve 0.04285/2
+            i1.setScaling(0.5);
+            i1.draw(gl.POINTS);
+            i1.setTranslation(-0.8045, 0.021425);
+            i1.draw(gl.POINTS);
+            i1.reflectX();
+            i1.setTranslation(-0.9575, -0.021425); // 0.017/2 ve 0.04285/2
+            i1.draw(gl.POINTS);
+            i1.setTranslation(-0.8045, -0.021425);
+            i1.draw(gl.POINTS);
+        }
+        function createIwLines() {
+            let i = new Character('i harfi');
+            i.setVerticesAndColor(0.0, 0.3, 255, 0, 50);    //üst yatay çizgi sol
+            i.setVerticesAndColor(0.068, 0.3, 255, 0, 50);   //üst yatay çizgi sağ
+            i.setVerticesAndColor(0.0, -0.3, 255, 0, 50);   //alt yatay çizgi sol
+            i.setVerticesAndColor(0.068, -0.3, 255, 0, 50); //üst yatay çizgi sağ
+            i.setVerticesAndColor(0.034, -0.3, 255, 0, 50); //sol dikey çizgi alt
+            i.setVerticesAndColor(0.034, 0.3, 255, 0, 50);  //sol dikey çizgi üst
+            i.setVerticesAndColor(0.068, 0.3, 255, 0, 50);  //sağ dikey çizgi üst
+            i.setVerticesAndColor(0.068, -0.3, 255, 0, 50); //sağ dikey çizgi alt
+            for (var g = 0; g < 4; g++) {
+                i.setIndex([g * 2, 2]);
+            }
+
+            return i;
+
+        }
+
+        function drawN() {
+            let n = new Character('n harfi');
+            let i = createIwLines();
+            i.setColorForLine([
+                150, 101, 4,
+                150, 101, 4,
+                4, 150, 101,
+                4, 150, 101,
+                4, 150, 101,
+                150, 101, 4,
+                150, 101, 4,
+                4, 150, 101
+            ]);
+
+
+            i.setTranslation(0.19, 0);
+            i.draw(gl.LINES);
+
+            n.setVerticesAndColor(0.258, 0.3, 150, 101, 4);
+            n.setVerticesAndColor(0.394, -0.3, 4, 150, 101,);
+            n.setVerticesAndColor(0.394, 0.3, 235, 26, 42);
+            n.setIndex([0, 3]);
+
+            n.draw(gl.LINE_STRIP);
+
+        }
+        function drawU() {
+            let u = new Character('u harfi');
+            let i = createIwLines();
+            i.setColorForLine([
+                235, 26, 42,
+                235, 26, 42,
+                4, 150, 101,
+                36, 101, 117,
+                20, 126, 109,
+                235, 26, 42,
+
+                235, 26, 42,
+                36, 101, 117
+            ]);
+            i.setTranslation(0.428, 0);
+            i.draw(gl.LINES);
+
+            u.setVerticesAndColor(0.496, -0.3, 36, 101, 117);
+            u.setVerticesAndColor(0.632, -0.3, 101, 4, 150);
+            u.setVerticesAndColor(0.632, 0.3, 53, 77, 126);
+
+            u.setIndex([0, 3]);
+            u.draw(gl.LINE_STRIP);
+
+        }
+        function drawR() {
+            let r = new Character('r harfi');
+            let i = createIwLines();
+            i.setColorForLine([
+                53, 77, 126,
+                120,51,169,
+                101, 4, 150,
+                152,86,100,
+
+
+                127,45,125,
+                87,64,148,
+
+                120,51,169,
+                152,86,100
+            ]);
+            i.setTranslation(0.666, 0);
+            i.draw(gl.LINES);
+            r.setVerticesAndColor(0.734, 0.3, 120,51,169);
+            r.setVerticesAndColor(0.87, 0.3, 255,0,255);
+            r.setVerticesAndColor(0.87, 0, 255,128,128);
+            r.setVerticesAndColor(0.734, 0, 136,69,135);
+            r.setVerticesAndColor(0.87, -0.3, 255, 255, 0);
+            r.setIndex([0, 5]);
+            r.draw(gl.LINE_STRIP);
+        }
+
+
+
+        gl.clearColor(0.0, 0.0, 0.0, 1.0);
+        gl.clear(gl.COLOR_BUFFER_BIT);
+
+        drawH();
+        drawA();
+        drawL();
+        drawI();
+        drawPoint();
+        drawM();
+        drawE();
+        drawN();
+        drawU();
+        drawR();
+
+
+
+
+
+
+
+
+
+
+    </script>
+</body>
+
+</html>
