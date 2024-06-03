@@ -2,6 +2,13 @@
 
 Bu proje, WebGL kullanarak HTML Canvas üzerinde basit grafik çizimlerini yapar. Aşağıda, projede kullanılan sınıf ve fonksiyonların kısa açıklamaları bulunmaktadır.
 
+## İçindekiler
+
+1. [Shader Kodları](#shader-kodları)
+2. [Sınıflar](#sınıflar)
+3. [Fonksiyonlar](#fonksiyonlar)
+4. [Ekran Çıktısı](#ekran-çıktısı)
+
 ## Shader kodları
 
 ### Vertex Shader
