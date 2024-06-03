@@ -103,8 +103,8 @@ Bir noktayı çizer.
 
 ### `createIwLines()`
 
-- `I` harfini yatay ve dikey çizgilerle oluşturan bir `Character` nesnesi oluşturur. Görüntüsü aşağıdaki gibidir:
-- ![I harfi](image.png)
+`I` harfini yatay ve dikey çizgilerle oluşturan bir `Character` nesnesi oluşturur. Görüntüsü aşağıdaki gibidir:<br>
+![I harfi](image.png)
 
 ### `drawN()`
 
